@@ -1633,6 +1633,12 @@ private:
     myStarParticles = new extraStarData[nStoreStar];
   }
 
+  void loadTipsyHelper(Tipsy::TipsyReader &r,
+                       const double dTuFac, // Convert Temperature
+                       const bool bDoublePos,
+                       const bool bDoubleVel,
+                       const CkCallback &cb);
+
 public:
   ~TreePiece()
   {
@@ -1696,6 +1702,11 @@ public:
                  const bool bDoubleVel,
                  Ck::IO::Session session,
                  const CkCallback &cb);
+  void loadTipsy(const std::string &filename, const double dTuFac,
+                 const bool bDoublePos,
+                 const bool bDoubleVel,
+                 const CkCallback &cb);
+
   /// @brief read a tipsy array file (binary or ascii)
   void readTipsyArray(OutputParams &params, const CkCallback &cb);
   void resetMetals(const CkCallback &cb);

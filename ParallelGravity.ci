@@ -305,6 +305,11 @@ mainmodule ParallelGravity
                                    const bool bDoubleVel,
                                    Ck::IO::Session session,
                                    const CkCallback &cb);
+    entry[threaded] void loadTipsy(const std::string &filename,
+                                   const double dTuFac,
+                                   const bool bDoublePos,
+                                   const bool bDoubleVel,
+                                   const CkCallback &cb);
 
     entry void readTipsyArray(CkReference<OutputParams> params, const CkCallback &cb);
     entry void resetMetals(const CkCallback &cb);

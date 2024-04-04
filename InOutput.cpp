@@ -169,6 +169,25 @@ static bool isLoadingPiece(int iIndex, int nPieces)
 #endif
     return bLoading;
 }
+void TreePiece::loadTipsy(const std::string &filename,
+                          const double dTuFac, // Convert Temperature
+                          const bool bDoublePos,
+                          const bool bDoubleVel,
+                          const CkCallback &cb)
+{
+    LBTurnInstrumentOff();
+    basefilename = filename;
+
+    Tipsy::TipsyReader r(basefilename, bDoublePos, bDoubleVel);
+    if (!r.status())
+    {
+        cerr << thisIndex << ": TreePiece: Fatal: Couldn't open tipsy file!" << endl;
+        cb.send(0); // Fire off callback
+        return;
+    }
+
+    loadTipsyHelper(r, dTuFac, bDoublePos, bDoubleVel, cb);
+}
 
 void TreePiece::loadTipsy(const std::string &filename,
                           const double dTuFac, // Convert Temperature
@@ -187,6 +206,15 @@ void TreePiece::loadTipsy(const std::string &filename,
         cb.send(0); // Fire off callback
         return;
     }
+    loadTipsyHelper(r, dTuFac, bDoublePos, bDoubleVel, cb);
+}
+
+void TreePiece::loadTipsyHelper(Tipsy::TipsyReader &r,
+                                const double dTuFac, // Convert Temperature
+                                const bool bDoublePos,
+                                const bool bDoubleVel,
+                                const CkCallback &cb)
+{
 
     Tipsy::header tipsyHeader = r.getHeader();
     nTotalParticles = tipsyHeader.nbodies;

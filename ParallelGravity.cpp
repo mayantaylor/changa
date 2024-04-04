@@ -45,7 +45,7 @@
 #include "externalGravity.h"
 #include "formatted_string.h"
 #include "PETreeMerger.h"
-
+#define CKIO
 #ifdef CUDA
 // for default per-list parameters
 #include "cuda_typedef.h"
@@ -2337,7 +2337,28 @@ void Main::setupICs()
             bool bInDPos = false;
             bool bInDVel = false;
 
-            Tipsy::PartialTipsyFile ptf(basefilename, 0, 0);
+            Tipsy::PartialTipsyFile ptf;
+            Ck::IO::FileReadyMsg *fmsg;
+            Ck::IO::SessionReadyMsg *smsg;
+
+#ifdef CKIO
+            CkPrintf("Starting CkIO setup\n");
+
+            Ck::IO::Options opts;
+            opts.numReaders = 1;
+
+            CkPrintf("Opening file with CkIO\n");
+            Ck::IO::open(basefilename.c_str(), CkCallbackResumeThread((void *&)fmsg), opts);
+            CkPrintf("Starting read session with CkIO\n");
+            Ck::IO::startReadSession(fmsg->file, s.st_size, 0, CkCallbackResumeThread((void *&)smsg));
+            // end ckio integration
+
+            ptf = Tipsy::PartialTipsyFile(smsg->session, 0, 0);
+#elif
+
+            ptf = Tipsy::PartialTipsyFile(basefilename, 0, 0);
+#endif
+
             if (!ptf.loadedSuccessfully())
             {
                 ckerr << endl
@@ -2354,21 +2375,26 @@ void Main::setupICs()
             if (bInDVel)
                 CkPrintf("assumed double velocities...");
 
-            // ckio callback
-            Ck::IO::FileReadyMsg *fmsg;
-            Ck::IO::SessionReadyMsg *smsg;
+#ifdef CKIO
+            CkPrintf("Calling loadTipsy with CkIO session\n");
 
-            Ck::IO::Options opts;
-            opts.numReaders = 1;
-
-            Ck::IO::open(basefilename.c_str(), CkCallbackResumeThread((void *&)fmsg), opts);
-            Ck::IO::startReadSession(fmsg->file, s.st_size, 0, CkCallbackResumeThread((void *&)smsg));
-
-            treeProxy.loadTipsy(basefilename, dTuFac, bInDPos, bInDVel, 
+            treeProxy.loadTipsy(basefilename, dTuFac, bInDPos, bInDVel,
                                 smsg->session,
                                 CkCallbackResumeThread());
+
+            CkPrintf("setupICs thread has been resumed\n");
+
+            Ck::IO::closeReadSession(smsg->session, CkCallbackResumeThread());
+
+            CkPrintf("Closing CkIO session.\n");
+            Ck::IO::close(fmsg->file, CkCallbackResumeThread());
+            CkPrintf("Closing CkIO fil done.\n");
+#elif
+            treeProxy.loadTipsy(basefilename, dTuFac, bInDPos, bInDVel, CkCallbackResumeThread());
+#endif
         }
     }
+
     catch (std::ios_base::failure e)
     {
         ckerr << "File read: " << basefilename.c_str() << ": " << e.what()
@@ -2613,7 +2639,7 @@ void Main::setupICs()
     ofsLog << "# Key sizes: " << sizeof(KeyType) << " bytes particle "
            << sizeof(NodeKey) << " bytes node" << endl;
 
-    // Print out load balance information
+// Print out load balance information
 #ifdef LB_MANAGER_VERSION
     LBManager *lbMgr = LBManagerObj();
 #else
