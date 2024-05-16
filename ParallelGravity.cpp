@@ -45,7 +45,10 @@
 #include "externalGravity.h"
 #include "formatted_string.h"
 #include "PETreeMerger.h"
-#define CKIO
+
+#undef CKIO
+#define BENCH_IO
+
 #ifdef CUDA
 // for default per-list parameters
 #include "cuda_typedef.h"
@@ -2338,23 +2341,26 @@ void Main::setupICs()
             bool bInDVel = false;
 
             Tipsy::PartialTipsyFile ptf;
+
+            // starting read process
+
+#ifdef BENCH_IO
+            double readStartTime = CkWallTimer();
+#endif
+
+            // note treeProxy is treePiece array of size numTreePieces. The treeProxy array calls loadTipsy
+#ifdef CKIO
             Ck::IO::FileReadyMsg *fmsg;
             Ck::IO::SessionReadyMsg *smsg;
 
-#ifdef CKIO
-            CkPrintf("Starting CkIO setup\n");
-
             Ck::IO::Options opts;
-            opts.numReaders = 1;
+            opts.numReaders = 256;
 
-            CkPrintf("Opening file with CkIO\n");
             Ck::IO::open(basefilename.c_str(), CkCallbackResumeThread((void *&)fmsg), opts);
-            CkPrintf("Starting read session with CkIO\n");
             Ck::IO::startReadSession(fmsg->file, s.st_size, 0, CkCallbackResumeThread((void *&)smsg));
-            // end ckio integration
 
             ptf = Tipsy::PartialTipsyFile(smsg->session, 0, 0);
-#elif
+#else
 
             ptf = Tipsy::PartialTipsyFile(basefilename, 0, 0);
 #endif
@@ -2370,28 +2376,47 @@ void Main::setupICs()
             }
             bInDPos = ptf.isDoublePos();
             bInDVel = ptf.isDoubleVel();
+
+#if !defined(BENCH_IO)
             if (bInDPos)
                 CkPrintf("assumed double positions...");
             if (bInDVel)
                 CkPrintf("assumed double velocities...");
+#endif
 
 #ifdef CKIO
-            CkPrintf("Calling loadTipsy with CkIO session\n");
-
+            // loadTipsy creates a tipsy reader and loads data into myparticles (private variable)
             treeProxy.loadTipsy(basefilename, dTuFac, bInDPos, bInDVel,
                                 smsg->session,
                                 CkCallbackResumeThread());
 
-            CkPrintf("setupICs thread has been resumed\n");
-
             Ck::IO::closeReadSession(smsg->session, CkCallbackResumeThread());
 
-            CkPrintf("Closing CkIO session.\n");
             Ck::IO::close(fmsg->file, CkCallbackResumeThread());
-            CkPrintf("Closing CkIO fil done.\n");
-#elif
+#else
             treeProxy.loadTipsy(basefilename, dTuFac, bInDPos, bInDVel, CkCallbackResumeThread());
 #endif
+
+#ifdef BENCH_IO
+            double totalTime = CkWallTimer() - readStartTime;
+
+            // print time to a log file
+            ofstream ofsLog;
+#ifdef CKIO
+            string achLogFileName = "benchmarkCkIO-256BC.log";
+#else
+            string achLogFileName = "benchTipsyIO.log";
+#endif // CKIO
+            ofsLog.open(achLogFileName.c_str(), ios_base::app);
+            CkMustAssert(bool(ofsLog), "Error opening log file.");
+
+            ofsLog << std::to_string(CkNumPes()) << " "
+                   << numTreePieces << " " << totalTime << endl;
+            ofsLog.close();
+
+            CkExit();
+#endif // BENCH_IO
+       // read complete (thread resumed)
         }
     }
 
@@ -4624,4 +4649,4 @@ void printTreeGraphViz(GenericTreeNode *node, ostream &out, const string &name)
 #include "CacheManager.def.h"
 #undef CK_TEMPLATES_ONLY
 #include "CacheManager.def.h"
-*/
+    */
