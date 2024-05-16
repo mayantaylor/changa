@@ -223,21 +223,22 @@ void TreePiece::loadTipsyHelper(Tipsy::TipsyReader &r,
     nTotalStar = tipsyHeader.nstar;
     dStartTime = tipsyHeader.time;
 
-    bool skipLoad = !isLoadingPiece(thisIndex, numTreePieces);
+    // bool skipLoad = !isLoadingPiece(thisIndex, numTreePieces);
 
-    if (skipLoad)
-    {
-        myNumParticles = 0;
-        nStartRead = -1;
-        contribute(cb);
-        return;
-    }
+    // if (skipLoad)
+    // {
+    //     myNumParticles = 0;
+    //     nStartRead = -1;
+    //     contribute(cb);
+    //     return;
+    // }
 
     // find your load offset into input file
     int myIndex = CkMyPe();
     int numLoadingPEs = CkNumPes();
     myNumParticles = nTotalParticles / numLoadingPEs;
     int excess = nTotalParticles % numLoadingPEs;
+
     int64_t startParticle = ((int64_t)myNumParticles) * myIndex;
     if (myIndex < excess)
     {
@@ -927,7 +928,7 @@ void TreePiece::loadNChilada(const std::string &filename,
 
     // find your load offset into input file
     int myIndex = CkMyPe();
-    int numLoadingPEs = CkNumPes();
+    int numLoadingPEs = numTreePieces;
     myNumParticles = nTotalParticles / numLoadingPEs;
     int excess = nTotalParticles % numLoadingPEs;
     int64_t startParticle = ((int64_t)myNumParticles) * myIndex;
