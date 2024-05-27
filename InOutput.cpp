@@ -223,19 +223,25 @@ void TreePiece::loadTipsyHelper(Tipsy::TipsyReader &r,
     nTotalStar = tipsyHeader.nstar;
     dStartTime = tipsyHeader.time;
 
-    // bool skipLoad = !isLoadingPiece(thisIndex, numTreePieces);
+#undef ORIG
+#ifdef ORIG
+    bool skipLoad = !isLoadingPiece(thisIndex, numTreePieces);
 
-    // if (skipLoad)
-    // {
-    //     myNumParticles = 0;
-    //     nStartRead = -1;
-    //     contribute(cb);
-    //     return;
-    // }
-
-    // find your load offset into input file
-    int myIndex = CkMyPe();
+    if (skipLoad)
+    {
+        myNumParticles = 0;
+        nStartRead = -1;
+        contribute(cb);
+        return;
+    }
     int numLoadingPEs = CkNumPes();
+    int myIndex = CkMyPe();
+#else
+    int numLoadingPEs = numTreePieces;
+    int myIndex = thisIndex;
+#endif
+    // find your load offset into input file
+
     myNumParticles = nTotalParticles / numLoadingPEs;
     int excess = nTotalParticles % numLoadingPEs;
 

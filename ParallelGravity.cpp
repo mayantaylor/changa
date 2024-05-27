@@ -46,7 +46,7 @@
 #include "formatted_string.h"
 #include "PETreeMerger.h"
 
-#undef CKIO
+#define CKIO
 #define BENCH_IO
 
 #ifdef CUDA
@@ -2354,7 +2354,7 @@ void Main::setupICs()
             Ck::IO::SessionReadyMsg *smsg;
 
             Ck::IO::Options opts;
-            opts.numReaders = 256;
+            opts.numReaders = CkNumPes();
 
             Ck::IO::open(basefilename.c_str(), CkCallbackResumeThread((void *&)fmsg), opts);
             Ck::IO::startReadSession(fmsg->file, s.st_size, 0, CkCallbackResumeThread((void *&)smsg));
@@ -2403,9 +2403,9 @@ void Main::setupICs()
             // print time to a log file
             ofstream ofsLog;
 #ifdef CKIO
-            string achLogFileName = "benchmarkCkIO-256BC.log";
+            string achLogFileName = "benchmarkCkIO.log";
 #else
-            string achLogFileName = "benchTipsyIO.log";
+            string achLogFileName = "benchNoOpt.log";
 #endif // CKIO
             ofsLog.open(achLogFileName.c_str(), ios_base::app);
             CkMustAssert(bool(ofsLog), "Error opening log file.");
